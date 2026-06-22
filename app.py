@@ -5,7 +5,7 @@ import json
 import time
 from datetime import datetime
 from db import (
-    init_db, seed_default_materials,
+    seed_default_materials,
     add_material, get_all_materials, update_material, delete_material,
     save_formula, update_formula_override, get_formula_batches, get_all_formulas, get_formula_details, delete_formula,
     prepare_glaze_batch, update_batch_status, set_batch_ball_milling, finish_batch_milling, get_all_batches, deduct_glaze_stock,
