@@ -23,96 +23,6 @@ def get_db():
     finally:
         conn.close()
 
-def init_db():
-    """初始化数据库表（如果尚未创建）"""
-    with get_db() as conn:
-        cur = conn.cursor()
-        # 原料表
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS raw_materials (
-                id SERIAL PRIMARY KEY,
-                name TEXT UNIQUE NOT NULL,
-                category TEXT,
-                material_type TEXT DEFAULT '其它',
-                chem_analysis JSONB NOT NULL DEFAULT '{}',
-                stock_kg REAL DEFAULT 0,
-                price_per_kg REAL DEFAULT 0,
-                supplier TEXT DEFAULT ''
-            )
-        ''')
-        # 配方表
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS formulas (
-                id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL,
-                version TEXT NOT NULL DEFAULT 'v1.0',
-                notes TEXT,
-                category TEXT DEFAULT '青釉',
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                UNIQUE(name, version)
-            )
-        ''')
-        # 配方成分表
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS formula_ingredients (
-                id SERIAL PRIMARY KEY,
-                formula_id INTEGER NOT NULL REFERENCES formulas(id) ON DELETE CASCADE,
-                material_id INTEGER NOT NULL REFERENCES raw_materials(id) ON DELETE CASCADE,
-                quantity REAL NOT NULL
-            )
-        ''')
-        # 釉料批次表
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS glaze_batches (
-                id SERIAL PRIMARY KEY,
-                batch_code TEXT UNIQUE NOT NULL,
-                formula_id INTEGER NOT NULL REFERENCES formulas(id) ON DELETE RESTRICT,
-                total_weight_g REAL NOT NULL,
-                water_weight_kg REAL DEFAULT 0,
-                stock_kg REAL DEFAULT 0,
-                ball_mill_hours REAL DEFAULT 0,
-                mill_type TEXT DEFAULT '',
-                storage_location TEXT DEFAULT '',
-                label_code TEXT DEFAULT '',
-                milling_date DATE,
-                status TEXT DEFAULT '待球磨',
-                created_at TIMESTAMPTZ DEFAULT NOW()
-            )
-        ''')
-        # 烧成记录表
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS firing_records (
-                id SERIAL PRIMARY KEY,
-                firing_date DATE,
-                kiln_name TEXT,
-                atmosphere TEXT,
-                target_temp TEXT,
-                dynamic_records JSONB DEFAULT '[]',
-                result_notes TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW()
-            )
-        ''')
-        # 成品表
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS ceramic_items (
-                id SERIAL PRIMARY KEY,
-                item_code TEXT UNIQUE NOT NULL,
-                name TEXT NOT NULL,
-                clay_id INTEGER REFERENCES raw_materials(id) ON DELETE SET NULL,
-                glaze_batch_id INTEGER REFERENCES glaze_batches(id) ON DELETE SET NULL,
-                firing_id INTEGER REFERENCES firing_records(id) ON DELETE SET NULL,
-                status TEXT DEFAULT '在库',
-                price REAL DEFAULT 0,
-                storage_location TEXT,
-                notes TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW()
-            )
-        ''')
-        # 索引（部分）
-        cur.execute('CREATE INDEX IF NOT EXISTS idx_raw_name ON raw_materials(name)')
-        cur.execute('CREATE INDEX IF NOT EXISTS idx_batch_formula ON glaze_batches(formula_id)')
-        cur.execute('CREATE INDEX IF NOT EXISTS idx_item_status ON ceramic_items(status)')
-        cur.execute('CREATE INDEX IF NOT EXISTS idx_item_location ON ceramic_items(storage_location)')
 
 # ---------- 原料操作 ----------
 def add_material(name, category, material_type, analysis, stock, price, supplier) -> bool:
@@ -145,7 +55,7 @@ def get_all_materials(search: str = None, material_type: str = None) -> List[Dic
         rows = cur.fetchall()
     return [{
         "id": row['id'], "name": row['name'], "category": row['category'],
-        "material_type": row['material_type'], "analysis": json.loads(row['chem_analysis']),
+        "material_type": row['material_type'], "analysis": row['chem_analysis'],
         "stock_kg": row['stock_kg'], "price_per_kg": row['price_per_kg'],
         "supplier": row['supplier']
     } for row in rows]
@@ -247,7 +157,7 @@ def get_formula_details(formula_id) -> List[Dict]:
         rows = cur.fetchall()
     return [{
         "quantity": row['quantity'], "name": row['name'],
-        "analysis": json.loads(row['chem_analysis']),
+        "analysis": row['chem_analysis'],
         "material_id": row['material_id'], "stock_kg": row['stock_kg']
     } for row in rows]
 
