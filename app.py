@@ -26,7 +26,6 @@ OXIDE_NAMES_CN = {
 from ui import render_oxide_inputs, material_card
 
 # 初始化
-init_db()
 seed_default_materials()
 
 st.set_page_config(page_title="陶瓷工作室数字工作台", page_icon="🏺", layout="wide")
@@ -949,7 +948,7 @@ elif page == "🔥 烧成中心":
         # 查看动态数据
         sel = st.selectbox("选择记录查看详细曲线", range(len(firings)),
                            format_func=lambda i: f"{firings[i]['firing_date']} - {firings[i]['kiln_name']}")
-        dyn = json.loads(firings[sel]['dynamic_records'] or '[]')
+        dyn = firings[sel]['dynamic_records'] or []
         if dyn:
             st.dataframe(pd.DataFrame(dyn), width='stretch')
         else:
